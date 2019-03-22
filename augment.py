@@ -25,7 +25,17 @@ def apply_intensity_adjustment(img, params):
   alpha = params['alpha'] if has_alpha else 1.0
   beta = params['beta'] if has_alpha else 0.0
 
-  return np.clip((img * alpha + beta), 0, 255).astype(img.dtype)
+  return np.clip((img * [alpha, alpha, alpha] + [beta, beta, beta]), 0, 255).astype(img.dtype)
+
+def apply_hsv_adjustment(img, hsv):
+  if not len(hsv) == 3:
+    raise Exception('hsv must contain 3 values')
+
+  img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+  img = np.clip(img + hsv, 0, 255).astype(img.dtype)
+  img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+
+  return img
 
 def apply_to_gray(img):
   return cv2.cvtColor(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
@@ -116,6 +126,7 @@ def apply_shear(img, shear):
 def augment(
   img,
   intensity = None,
+  hsv = None,
   blur = None,
   to_gray = False,
   random_crop = None,
@@ -125,6 +136,7 @@ def augment(
   rotation_angle = None
 ):
   img = apply_intensity_adjustment(img, intensity) if intensity is not None else img
+  img = apply_hsv_adjustment(img, hsv) if hsv is not None else img
   img = apply_blur(img, blur) if blur is not None else img
   img = apply_to_gray(img) if to_gray is True else img
 
