@@ -2,7 +2,7 @@ import cv2
 import random
 import math
 import numpy as np
-from augment import augment, abs_coords
+from augment.augment import augment, abs_coords
 
 img = cv2.imread('./face.jpg')
 
