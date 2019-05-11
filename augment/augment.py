@@ -132,7 +132,7 @@ def apply_stretch(img, params, boxes = None):
 
   return stretched_img, stretched_boxes
 
-def apply_shear(img, shear):
+def apply_shear(img, shear, boxes = None):
   height, width = img.shape[:2]
 
   shear_h, shear_v = shear
@@ -140,7 +140,22 @@ def apply_shear(img, shear):
 
   shape = (width + int(round(height * shear_h)), height + int(round(width * shear_v)))
 
-  return cv2.warpAffine(img, shear_matrix, shape)
+  sheared_img = cv2.warpAffine(img, shear_matrix, shape)
+
+  transform_point = lambda x, y: (shear_matrix[0][0] * x + shear_matrix[0][1] * y, shear_matrix[1][0] * x + shear_matrix[1][1] * y)
+
+  sheared_boxes = None
+  if boxes is not None:
+    sheared_boxes = []
+    for box in boxes:
+      x0, y0, w, h = abs_coords(box, img)
+      tx0, ty0 = transform_point(x0, y0)
+      # TODO: only translate x0, y0?
+      #x1, y1 = x0 + w, y0 + h
+      #tx1, ty1 = transform_point(x1, y1)
+      sheared_boxes.append(rel_coords((tx0, ty0, w, h), sheared_img))
+
+  return sheared_img, sheared_boxes
 
 def apply_flip(img, is_flip, boxes = None):
   out_img = cv2.flip(img, 1) if is_flip is True else img
@@ -179,7 +194,7 @@ def augment(
     img, boxes = apply_random_crop(img, random_crop, boxes)
 
   img, boxes = apply_stretch(img, stretch, boxes) if stretch is not None else (img, boxes)
-  img = apply_shear(img, shear) if shear is not None else img
+  img, boxes = apply_shear(img, shear, boxes) if shear is not None else (img, boxes)
   img, boxes = apply_flip(img, flip, boxes)
   img = apply_rotate(img, rotation_angle) if rotation_angle is not None else img
 

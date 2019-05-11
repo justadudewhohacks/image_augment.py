@@ -30,10 +30,10 @@ while key != 32:
   res, res_boxes = augment(
     img,
     boxes = boxes,
-    #random_crop = roi,
-    #flip = random.random() < 0.5,
+    random_crop = roi,
+    flip = random.random() < 0.5,
     stretch = { 'stretch_x': random.uniform(1.0, 1.4), 'stretch_y': random.uniform(1.0, 1.4) },
-    #shear = [random.uniform(0.0, 0.2), random.uniform(0.0, 0.2)],
+    shear = [random.uniform(0.0, 0.2), random.uniform(0.0, 0.2)],
     #rotation_angle = random.uniform(-15, 15),
 
     blur = blur_config if random.random() < blur_prob else None,
