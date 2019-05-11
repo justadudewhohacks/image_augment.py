@@ -100,30 +100,37 @@ def apply_rotate(img, angle):
 
   return cv2.warpAffine(img, M, (new_width, new_height))
 
-def apply_stretch(img, params, bbox = None):
+def apply_stretch(img, params, boxes = None):
   has_x = 'stretch_x' in params
   has_y = 'stretch_y' in params
-  has_roi = 'roi' in params
 
   height, width = img.shape[:2]
 
   if not has_x and not has_y:
     print('warning: random_stretch dict neither has x nor y')
 
-  if has_roi and bbox is not None:
-    print('warning: random_stretch dict has roi but bbox was specified by random_crop')
-
   stretch_x = params['stretch_x'] if has_x else 1.0
   stretch_y = params['stretch_y'] if has_y else 1.0
-
-  min_x, min_y, max_x, max_y = bbox if bbox is not None else abs_coords(params['roi'], img) if has_roi else default_box(img)
 
   shape_stretch_x = (int(round(stretch_x * width)), height)
   shape_stretch_y = (width, int(round(stretch_y * height)))
 
   shape = random.choice([shape_stretch_x, shape_stretch_y]) if has_x and has_y else (shape_stretch_y if not has_x else shape_stretch_x)
 
-  return cv2.resize(img, shape)
+  stretched_img = cv2.resize(img, shape)
+
+  stretched_boxes = None
+  if boxes is not None:
+    stretched_boxes = []
+    orig_h, orig_w = img.shape[0:2]
+    new_h, new_w = stretched_img.shape[0:2]
+    rx = new_w / orig_w
+    ry = new_h / orig_h
+    for box in boxes:
+      x, y, w, h = abs_coords(box, img)
+      stretched_boxes.append(rel_coords((x * rx, y * ry, w * rx, h * ry), stretched_img))
+
+  return stretched_img, stretched_boxes
 
 def apply_shear(img, shear):
   height, width = img.shape[:2]
@@ -171,7 +178,7 @@ def augment(
   if random_crop:
     img, boxes = apply_random_crop(img, random_crop, boxes)
 
-  img = apply_stretch(img, stretch, None) if stretch is not None else img
+  img, boxes = apply_stretch(img, stretch, boxes) if stretch is not None else (img, boxes)
   img = apply_shear(img, shear) if shear is not None else img
   img, boxes = apply_flip(img, flip, boxes)
   img = apply_rotate(img, rotation_angle) if rotation_angle is not None else img
