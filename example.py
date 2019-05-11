@@ -10,7 +10,7 @@ key = -1
 while key != 32:
 
   #roi = [0.35, 0.25, 0.65, 0.8]
-  roi = [0.1, 0.1, 0.9, 0.9]
+  roi = [0.1, 0.1, 0.1, 0.1]
 
   blur_config = { 'kernel_size':  random.choice([0, 3, 5, 7, 11]), 'std_dev': random.uniform(0.5, 1.5) }
   blur_prob = 0.5
