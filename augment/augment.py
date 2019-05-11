@@ -8,8 +8,13 @@ def num_in_range(val, min_val, max_val):
 
 def abs_coords(bbox, img):
   height, width = img.shape[:2]
-  min_x, min_y, max_x, max_y = bbox
-  return [int(round(min_x * width)), int(round(min_y * height)), int(round(max_x * width)), int(round(max_y * height))]
+  min_x, min_y, max_x_or_w, max_y_or_h = bbox
+  return [int(round(min_x * width)), int(round(min_y * height)), int(round(max_x_or_w * width)), int(round(max_y_or_h * height))]
+
+def rel_coords(bbox, img):
+  height, width = img.shape[:2]
+  min_x, min_y, max_x_or_w, max_y_or_h = bbox
+  return [min_x / width, min_y / height, max_x_or_w / width, max_y_or_h / height]
 
 def default_box(img):
   height, width = img.shape[:2]
@@ -52,10 +57,10 @@ def apply_blur(img, params):
 
   return cv2.GaussianBlur(img, (kernel_size, kernel_size), std_dev, std_dev)
 
-def apply_random_crop(img, bbox):
+def apply_random_crop(img, roi, boxes = None):
   height, width = img.shape[:2]
 
-  min_x, min_y, max_x, max_y = bbox
+  min_x, min_y, max_x, max_y = roi
   min_x = int(num_in_range(min_x, 0, 1) * width)
   min_y = int(num_in_range(min_y, 0, 1) * height)
   max_x = int(num_in_range(max_x, 0, 1) * width)
@@ -65,11 +70,23 @@ def apply_random_crop(img, bbox):
   x1 = random.randint(0, abs(width - max_x)) + max_x
   y1 = random.randint(0, abs(height - max_y)) + max_y
 
-  sx = min_x - x0
-  sy = min_y - y0
-  shifted_bbox = [sx, sy, sx + (max_x - min_x), sy + (max_y - min_y)]
+  cropped_img = img[y0:y1, x0:x1]
 
-  return img[y0:y1, x0:x1], shifted_bbox
+  shifted_boxes = None
+  if boxes is not None:
+    shifted_boxes = []
+    for box in boxes:
+      x, y, w, h = abs_coords(box, img)
+      sx = x - x0
+      sy = y - y0
+      print((x, y, w, h))
+      print((sx, sy, w, h))
+      print(rel_coords((sx, sy, w, h), cropped_img))
+      shifted_boxes.append(rel_coords((sx, sy, w, h), cropped_img))
+
+  print(boxes)
+  print(shifted_boxes)
+  return cropped_img, shifted_boxes
 
 def apply_rotate(img, angle):
   height, width = img.shape[:2]
@@ -125,6 +142,7 @@ def apply_shear(img, shear):
 
 def augment(
   img,
+  boxes = None,
   intensity = None,
   hsv = None,
   blur = None,
@@ -144,13 +162,15 @@ def augment(
 
 
   # TODO roi rotate, shift and shear before random_crop, return transormed roi
-  shifted_bbox = None
   if random_crop:
-    img, shifted_bbox = apply_random_crop(img, random_crop)
+    img, boxes = apply_random_crop(img, random_crop, boxes)
 
-  img = apply_stretch(img, stretch, shifted_bbox) if stretch is not None else img
+  img = apply_stretch(img, stretch, None) if stretch is not None else img
   img = apply_shear(img, shear) if shear is not None else img
   img = cv2.flip(img, 1) if flip is True else img
   img = apply_rotate(img, rotation_angle) if rotation_angle is not None else img
+
+  if boxes is not None:
+    return img, boxes
 
   return img
