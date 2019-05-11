@@ -84,21 +84,43 @@ def apply_random_crop(img, roi, boxes = None):
 
   return cropped_img, shifted_boxes
 
-def apply_rotate(img, angle):
+def apply_rotate(img, angle, boxes = None):
   height, width = img.shape[:2]
   cx, cy = int(width / 2), int(height / 2)
 
-  M = cv2.getRotationMatrix2D((cx, cy), -angle, 1.0)
-  cos = np.abs(M[0, 0])
-  sin = np.abs(M[0, 1])
+  rotation_matrix = cv2.getRotationMatrix2D((cx, cy), -angle, 1.0)
+  cos = np.abs(rotation_matrix[0, 0])
+  sin = np.abs(rotation_matrix[0, 1])
 
   new_width = int((height * sin) + (width * cos))
   new_height = int((height * cos) + (width * sin))
 
-  M[0, 2] += (new_width / 2) - cx
-  M[1, 2] += (new_height / 2) - cy
+  rotation_matrix[0, 2] += (new_width / 2) - cx
+  rotation_matrix[1, 2] += (new_height / 2) - cy
 
-  return cv2.warpAffine(img, M, (new_width, new_height))
+  rotated_img = cv2.warpAffine(img, rotation_matrix, (new_width, new_height))
+
+  transform_point = lambda x, y: np.reshape(cv2.transform(np.reshape([x, y],(1, 1, 2)), rotation_matrix), 2)
+
+  rotated_boxes = boxes
+  if boxes is not None:
+    rotated_boxes = []
+    for box in boxes:
+      x0, y0, w, h = abs_coords(box, img)
+      p0 = transform_point(x0, y0)
+      p1 = transform_point(x0 + w, y0)
+      p2 = transform_point(x0, y0 + h)
+      p3 = transform_point(x0 + w, y0 + h)
+
+      xs = [p0[0], p1[0], p2[0], p3[0]]
+      ys = [p0[1], p1[1], p2[1], p3[1]]
+      new_x0 = min(xs)
+      new_y0 = min(ys)
+      new_x1 = max(xs)
+      new_y1 = max(ys)
+      rotated_boxes.append(rel_coords((new_x0, new_y0, new_x1 - new_x0, new_y1 - new_y0), rotated_img))
+
+  return rotated_img, rotated_boxes
 
 def apply_stretch(img, params, boxes = None):
   has_x = 'stretch_x' in params
@@ -196,7 +218,7 @@ def augment(
   img, boxes = apply_stretch(img, stretch, boxes) if stretch is not None else (img, boxes)
   img, boxes = apply_shear(img, shear, boxes) if shear is not None else (img, boxes)
   img, boxes = apply_flip(img, flip, boxes)
-  img = apply_rotate(img, rotation_angle) if rotation_angle is not None else img
+  img, boxes = apply_rotate(img, rotation_angle, boxes) if rotation_angle is not None else (img, boxes)
 
   if boxes is not None:
     return img, boxes
