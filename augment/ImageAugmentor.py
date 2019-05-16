@@ -60,7 +60,7 @@ class ImageAugmentor:
     self.blur_std_dev_range = blur_std_dev_range
     self.gray_prob = gray_prob
 
-  def augment(self, img, random_crop = None):
+  def augment(self, img, random_crop = None, boxes = None, pad_to_square = False, resize = None):
 
     def prob(p):
       return random.random() < p
@@ -74,6 +74,9 @@ class ImageAugmentor:
     return augment(
       img,
       random_crop = random_crop,
+      boxes = boxes,
+      pad_to_square = pad_to_square,
+      resize = resize,
       flip = prob(self.flip_prob),
       rotation_angle = random_in_range(self.rotation_angle_range) if prob(self.rotation_prob) else None,
       shear = [random_in_range(self.shear_ranges[0]), random_in_range(self.shear_ranges[1])] if prob(self.shear_prob) else None,

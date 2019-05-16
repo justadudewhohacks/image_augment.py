@@ -36,6 +36,9 @@ while key != 32:
     shear = [random.uniform(0.0, 0.2), random.uniform(0.0, 0.2)],
     rotation_angle = random.uniform(-15, 15),
 
+    pad_to_square = True,
+    resize = 400,
+
     blur = blur_config if random.random() < blur_prob else None,
     intensity = { 'alpha': random.uniform(0.5, 1.5), 'beta': random.uniform(-20, 20) },
     hsv = [random.uniform(-5, 5), random.uniform(-15, 15), random.uniform(-20, 20)],

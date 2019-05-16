@@ -190,6 +190,36 @@ def apply_flip(img, is_flip, boxes = None):
 
   return out_img, out_boxes
 
+
+def apply_resize_preserve_aspect_ratio(img, size):
+  height, width = img.shape[:2]
+  max_dim = max(height, width)
+  ratio = size / float(max_dim)
+  resized_img = cv2.resize(img, (int(round(width * ratio)), int(round(height * ratio))))
+
+  return resized_img
+
+def apply_pad_to_square(img, boxes = None):
+  if len(img.shape) == 2:
+    img = np.expand_dims(img, axis = 2)
+
+  height, width, channels = img.shape
+  max_dim = max(height, width)
+  out_img = np.zeros([max_dim, max_dim, channels], dtype = img.dtype)
+
+  dx = math.floor(abs(max_dim - width) / 2)
+  dy = math.floor(abs(max_dim - height) / 2)
+  out_img[dy:dy + height,dx:dx + width] = img
+
+  out_boxes = boxes
+  if boxes is not None:
+    out_boxes = []
+    for box in boxes:
+      x, y, w, h = abs_coords(box, img)
+      out_boxes.append(rel_coords((x + dx, y + dy, w, h), out_img))
+
+  return out_img, out_boxes
+
 def augment(
   img,
   boxes = None,
@@ -200,8 +230,10 @@ def augment(
   random_crop = None,
   stretch = None,
   shear = None,
+  rotation_angle = None,
   flip = False,
-  rotation_angle = None
+  pad_to_square = False,
+  resize = None
 ):
   img = apply_intensity_adjustment(img, intensity) if intensity is not None else img
   img = apply_hsv_adjustment(img, hsv) if hsv is not None else img
@@ -219,6 +251,8 @@ def augment(
   img, boxes = apply_shear(img, shear, boxes) if shear is not None else (img, boxes)
   img, boxes = apply_flip(img, flip, boxes)
   img, boxes = apply_rotate(img, rotation_angle, boxes) if rotation_angle is not None else (img, boxes)
+  img = apply_resize_preserve_aspect_ratio(img, resize) if resize else img
+  img, boxes = apply_pad_to_square(img, boxes) if pad_to_square else (img, boxes)
 
   if boxes is not None:
     return img, boxes
