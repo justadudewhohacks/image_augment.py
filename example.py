@@ -4,13 +4,16 @@ import math
 import numpy as np
 from augment.augment import augment, abs_coords
 
-img = cv2.imread('./face.jpg')
+img = cv2.imread('./lenna.jpg')
 
 key = -1
 while key != 32:
 
   #roi = [0.35, 0.25, 0.65, 0.8]
-  roi = [0.1, 0.1, 0.9, 0.9]
+  random_crop = { 'roi': [0.4, 0.3, 0.2, 0.4], 'crop_range': 0.8 }
+  roi = random_crop['roi']
+  #random_crop = [0.35, 0.25, 0.35, 0.6]
+  #roi = random_crop
 
   blur_config = { 'kernel_size':  random.choice([0, 3, 5, 7, 11]), 'std_dev': random.uniform(0.5, 1.5) }
   blur_prob = 0.5
@@ -25,11 +28,12 @@ while key != 32:
     hsv = [random.uniform(-5, 5), random.uniform(-15, 15), random.uniform(-20, 20)],
     to_gray = random.random() < gray_prob,
     shear = [random.uniform(0.0, 0.2), random.uniform(0.0, 0.2)],
-    random_crop = roi,
-    stretch = { 'stretch_x': random.uniform(1.0, 1.4), 'stretch_y': random.uniform(1.0, 1.4) }
+    random_crop = random_crop,
+    stretch = { 'stretch_x': random.uniform(1.0, 1.4), 'stretch_y': random.uniform(1.0, 1.4) },
+    pad_to_square = True
   )
 
   abs_roi = abs_coords(roi, img)
-  cv2.imshow('roi', img[abs_roi[1]:abs_roi[3], abs_roi[0]:abs_roi[2]])
+  cv2.imshow('roi', img[abs_roi[1]:(abs_roi[1] + abs_roi[3]), abs_roi[0]:(abs_roi[0] + abs_roi[2])])
   cv2.imshow('res', res)
   key = cv2.waitKey(0)

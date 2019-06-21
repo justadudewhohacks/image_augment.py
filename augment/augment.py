@@ -57,7 +57,15 @@ def apply_blur(img, params):
 
   return cv2.GaussianBlur(img, (kernel_size, kernel_size), std_dev, std_dev)
 
-def apply_random_crop(img, roi, boxes = None):
+def get_crop_roi(random_crop):
+  roi = random_crop
+  crop_range = 0
+  if isinstance(random_crop, dict):
+    roi = random_crop['roi']
+    crop_range = random_crop['crop_range']
+  return roi, crop_range
+
+def apply_random_crop(img, roi, crop_range, boxes = None):
   height, width = img.shape[:2]
 
   x, y, w, h = roi
@@ -66,10 +74,10 @@ def apply_random_crop(img, roi, boxes = None):
   min_y = int(num_in_range(min_y, 0, 1) * height)
   max_x = int(num_in_range(max_x, 0, 1) * width)
   max_y = int(num_in_range(max_y, 0, 1) * height)
-  x0 = random.randint(0, min_x)
-  y0 = random.randint(0, min_y)
-  x1 = random.randint(0, abs(width - max_x)) + max_x
-  y1 = random.randint(0, abs(height - max_y)) + max_y
+  x0 = random.randint(round(crop_range * min_x), min_x)
+  y0 = random.randint(round(crop_range * min_y), min_y)
+  x1 = random.randint(0, round((1.0 - crop_range) * abs(width - max_x))) + max_x
+  y1 = random.randint(0, round((1.0 - crop_range) * abs(height - max_y))) + max_y
 
   cropped_img = img[y0:y1, x0:x1]
 
@@ -245,7 +253,8 @@ def augment(
 
   # TODO roi rotate, shift and shear before random_crop, return transormed roi
   if random_crop:
-    img, boxes = apply_random_crop(img, random_crop, boxes)
+    crop_roi, crop_range = get_crop_roi(random_crop)
+    img, boxes = apply_random_crop(img, crop_roi, crop_range, boxes)
 
   img, boxes = apply_stretch(img, stretch, boxes) if stretch is not None else (img, boxes)
   img, boxes = apply_shear(img, shear, boxes) if shear is not None else (img, boxes)
