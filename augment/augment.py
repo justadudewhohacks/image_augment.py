@@ -57,15 +57,18 @@ def apply_blur(img, params):
 
   return cv2.GaussianBlur(img, (kernel_size, kernel_size), std_dev, std_dev)
 
-def get_crop_roi(random_crop):
+def get_random_crop_options(random_crop):
   roi = random_crop
   crop_range = 0
+  apply_before_transform = True
   if isinstance(random_crop, dict):
     roi = random_crop['roi']
     crop_range = random_crop['crop_range']
-  return roi, crop_range
+    if 'apply_before_transform' in random_crop:
+      apply_before_transform = random_crop['apply_before_transform']
+  return roi, crop_range, apply_before_transform
 
-def apply_random_crop(img, roi, crop_range, boxes = None):
+def apply_random_crop(img, roi, crop_range, boxes = None, pad_to_square = False):
   height, width = img.shape[:2]
 
   x, y, w, h = roi
@@ -78,6 +81,18 @@ def apply_random_crop(img, roi, crop_range, boxes = None):
   y0 = random.randint(round(crop_range * min_y), min_y)
   x1 = random.randint(0, round((1.0 - crop_range) * abs(width - max_x))) + max_x
   y1 = random.randint(0, round((1.0 - crop_range) * abs(height - max_y))) + max_y
+
+  # todo pad to square
+  if pad_to_square:
+    height_new = y1 - y0
+    width_new = x1 - x0
+    pad = int(abs(height_new - width_new) / 2)
+    if height_new > width_new:
+      x0 = max(0, x0 - pad)
+      x1 = min(width, x1 + pad)
+    if width_new > height_new:
+      y0 = max(0, y0 - pad)
+      y1 = min(height, y1 + pad)
 
   cropped_img = img[y0:y1, x0:x1]
 
@@ -253,15 +268,22 @@ def augment(
 
   # TODO roi rotate, shift and shear before random_crop, return transormed roi
   if random_crop:
-    crop_roi, crop_range = get_crop_roi(random_crop)
+    crop_roi, crop_range, apply_before_transform = get_random_crop_options(random_crop)
+
+  if random_crop and apply_before_transform:
     img, boxes = apply_random_crop(img, crop_roi, crop_range, boxes)
 
   img, boxes = apply_stretch(img, stretch, boxes) if stretch is not None else (img, boxes)
   img, boxes = apply_shear(img, shear, boxes) if shear is not None else (img, boxes)
   img, boxes = apply_flip(img, flip, boxes)
   img, boxes = apply_rotate(img, rotation_angle, boxes) if rotation_angle is not None else (img, boxes)
+
+  if random_crop and not apply_before_transform:
+    img, boxes = apply_random_crop(img, crop_roi, crop_range, boxes, pad_to_square)
+
   img = apply_resize_preserve_aspect_ratio(img, resize) if resize else img
   img, boxes = apply_pad_to_square(img, boxes) if pad_to_square else (img, boxes)
+
 
   if boxes is not None:
     return img, boxes

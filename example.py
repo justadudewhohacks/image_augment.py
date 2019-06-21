@@ -10,7 +10,7 @@ key = -1
 while key != 32:
 
   #roi = [0.35, 0.25, 0.65, 0.8]
-  random_crop = { 'roi': [0.4, 0.3, 0.2, 0.4], 'crop_range': 0.8 }
+  random_crop = { 'roi': [0.4, 0.3, 0.2, 0.4], 'crop_range': 1.0 }
   roi = random_crop['roi']
   #random_crop = [0.35, 0.25, 0.35, 0.6]
   #roi = random_crop
