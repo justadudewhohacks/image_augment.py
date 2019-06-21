@@ -202,14 +202,17 @@ def apply_shear(img, shear, boxes = None):
 
   return sheared_img, sheared_boxes
 
-def apply_flip(img, is_flip, boxes = None):
-  out_img = cv2.flip(img, 1) if is_flip is True else img
+def flip_box(box):
+  x, y, w, h = box
+  return (1.0 - (x + w), y, w, h)
+
+def apply_flip(img, boxes = None):
+  out_img = cv2.flip(img, 1)
   out_boxes = boxes
-  if boxes is not None and is_flip:
+  if boxes is not None:
     out_boxes = []
     for box in boxes:
-      x, y, w, h = box
-      out_boxes.append((1.0 - (x + w), y, w, h))
+      out_boxes.append(flip_box(box))
 
   return out_img, out_boxes
 
@@ -275,10 +278,12 @@ def augment(
 
   img, boxes = apply_stretch(img, stretch, boxes) if stretch is not None else (img, boxes)
   img, boxes = apply_shear(img, shear, boxes) if shear is not None else (img, boxes)
-  img, boxes = apply_flip(img, flip, boxes)
+  img, boxes = apply_flip(img, boxes) if flip else (img, boxes)
   img, boxes = apply_rotate(img, rotation_angle, boxes) if rotation_angle is not None else (img, boxes)
 
   if random_crop and not apply_before_transform:
+    if flip:
+      crop_roi = flip_box(crop_roi)
     img, boxes = apply_random_crop(img, crop_roi, crop_range, boxes, pad_to_square)
 
   img = apply_resize_preserve_aspect_ratio(img, resize) if resize else img
